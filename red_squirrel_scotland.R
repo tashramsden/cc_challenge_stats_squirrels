@@ -59,12 +59,13 @@
 
 
 # Set working directory ----
-setwd('challenges/stats_from_scratch_squirrels')
+setwd('/challenges/stats_from_scratch_squirrels/cc_challenge_stats_squirrels')
 
 
 # Libraries ----
 library(tidyr)
 library(dplyr)
+library(ggplot2)
 
 
 # Import data ----
@@ -80,7 +81,7 @@ raw_squirrels <- read.csv('data/squirrels.csv')
 
 # Keep only observations for the years 2008 to 2017 (using the Start.date.year 
 # column and renaming it to year)
-squirrels = filter(raw_squirrels,  between(Start.date.year, 2008, 2017))
+squirrels <- filter(raw_squirrels,  between(Start.date.year, 2008, 2017))
 squirrels <- rename(squirrels, year = Start.date.year, count = Individual.count)
 
 str(squirrels)
@@ -103,12 +104,9 @@ str(squirrels)
 # of one squirrel; replace them with the value 1.
 squirrels$count <- replace_na(squirrels$count, 1)
 
+# Remove unwanted columns (not sure if this wanted!) 
+# small_squirrels <- dplyr::select(squirrels, species, count, year, Occurrence.ID)
 
-# Remove unwanted columns (not sure if this wanted!!!) ----
-small_squirrels <- dplyr::select(squirrels, species, count, year, Occurrence.ID)
-
-
-# UP TO HERE!!!!!!!!!!!!!!!!! -----------
 
 # 2. Temporal trends ----
 # Determine if there is a temporal trend in the number of observations for red 
@@ -120,7 +118,8 @@ small_squirrels <- dplyr::select(squirrels, species, count, year, Occurrence.ID)
 # would also account for spatial autocorrelation and other factors, but as a
 # preliminary analysis you are only asked to consider the total numbers at the
 # national scale.
-# Plot the data and run one linear model to test the question Have squirrel 
+
+# Plot the data and run *one* linear model to test the question: Have squirrel 
 # populations increased or decreased over time, and is the trend the same for 
 # red and grey squirrels?
 
@@ -136,8 +135,44 @@ small_squirrels <- dplyr::select(squirrels, species, count, year, Occurrence.ID)
 # t ecologically meaningful? Are there any biases in the data to be aware of?
 
 
+# group the data by species and year
+squirrels_grouped <- group_by(squirrels, species, year)
+
+# calculate total counts for red vs grey in each year
+summary <- summarise(squirrels_grouped, total_count = sum(count))
+
+summary$year <- as.factor(summary$year)
+str(summary)
 
 
+# plot of total squirrel count over time fot both red and grey squirrels
+(squirrel_plot <- ggplot(summary, aes(x=year, y=total_count, colour=species)) +
+    geom_point(size = 2) +
+    # Addlinear model fit, colour by country
+    # geom_smooth(method = "glm", aes(fill = species)) +
+    theme_bw() +
+    # add custom colours for solid geoms (ribbon)
+    # scale_fill_manual(values = c("#4A4A4A", "#FF4500")) +
+    # add custom colours for lines and points
+    scale_colour_manual(values = c("#4A4A4A", "#FF4500")) +
+    ylab("Squirrel Abundance\n") +
+    xlab("\nYear") +
+    theme(axis.text.x = element_text(size = 12, angle = 45, vjust = 1, hjust = 1),
+          axis.text.y = element_text(size = 12),
+          axis.title = element_text(size = 14, face = "plain"),                        
+          panel.grid = element_blank(),
+          plot.margin = unit(c(1,1,1,1), units = , "cm"),
+          legend.text = element_text(size = 8, face = "italic"),
+          legend.title = element_blank(),
+          legend.position = c(0.09, 0.799)))
+
+
+# Have squirrel populations increased or decreased over time?
+# Is the trend the same for red and grey squirrels?
+
+# UP TO HERE ---------
+# squirrel.m <- lm(total_count ~ year + species, data = summary)
+# summary(squirrel.m)
 
 
 # 3. Do red and grey squirrels prefer different habitats? ----
