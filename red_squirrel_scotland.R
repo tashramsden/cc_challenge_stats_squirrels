@@ -173,7 +173,7 @@ str(summary)
 # Have squirrel populations increased or decreased over time?
 # Is the trend the same for red and grey squirrels?
 
-squirrel.m <- lm(total_count ~ year + species, data = summary)
+squirrel.m <- lm(total_count ~ year*species, data = summary)
 summary(squirrel.m)
 # Both species have increased significantly over time, red squirrels more so
 
@@ -242,22 +242,21 @@ forest_squirrels = merge(summary2, forest, by="grid_ref")
           legend.position = c(0.9, 0.799)))
 
 # linear model
-# forest.m <- lm(total_count ~ cover, data = forest_squirrels)
+# forest.m <- lm(total_count ~ cover*species, data = forest_squirrels)
 # summary(forest.m)
-
-forest.m <- lm(total_count ~ cover + species, data = forest_squirrels)
-summary(forest.m)
-
 # no association with forest cover and no sig diff between species
 # NO! ----
 # Actual answer:
 # Red squirrels are positively associated with forest cover 
-# and grey squirrels show the opposite trend
+# and grey squirrels show the opposite trend - SEE BELOW!
 
 # glm
-# forest.m2 <- glm(total_count ~ cover + species, data = forest_squirrels,
-#                  family = poisson)
-# summary(forest.m2)
+forest.m2 <- glm(total_count ~ cover*species, data = forest_squirrels,
+                 family = poisson)
+summary(forest.m2)
+
+# for grey squirrels abundance decreases sig w forest cover,
+# whereas for reds it increases sig
 
 
 # 4. Re-classify forest cover ----
@@ -316,4 +315,5 @@ forest_squirrels <- group_by(forest_squirrels, species, cover.class)
 # From what cover class are red squirrels visibly more abundant than 
 # grey squirrels?
 # Answer:
-# From 20% cover and above    ???
+# From 20% cover and above  - I suppose so, but probably not significantly?!
+# (median higher but sig overlap in boxes!)
