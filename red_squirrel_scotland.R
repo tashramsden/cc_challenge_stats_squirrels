@@ -59,7 +59,8 @@
 
 
 # Set working directory ----
-setwd('/challenges/stats_from_scratch_squirrels/cc_challenge_stats_squirrels')
+# setwd('C:/Users/Tash/Documents/leaRning/Coding_club/challenges/stats_from_scratch_squirrels/cc_challenge_stats_squirrels')
+setwd('challenges/stats_from_scratch_squirrels/cc_challenge_stats_squirrels')
 
 
 # Libraries ----
@@ -70,6 +71,7 @@ library(ggplot2)
 
 # Import data ----
 raw_squirrels <- read.csv('data/squirrels.csv')
+forest <- read.csv('data/forestcoverOS.csv')
 
 
 # 1. Data manipulation ----
@@ -141,7 +143,8 @@ squirrels_grouped <- group_by(squirrels, species, year)
 # calculate total counts for red vs grey in each year
 summary <- summarise(squirrels_grouped, total_count = sum(count))
 
-summary$year <- as.factor(summary$year)
+# time series data so year should be numeric
+summary$year <- as.numeric(summary$year)
 str(summary)
 
 
@@ -170,9 +173,9 @@ str(summary)
 # Have squirrel populations increased or decreased over time?
 # Is the trend the same for red and grey squirrels?
 
-# UP TO HERE ---------
-# squirrel.m <- lm(total_count ~ year + species, data = summary)
-# summary(squirrel.m)
+squirrel.m <- lm(total_count ~ year + species, data = summary)
+summary(squirrel.m)
+# Both species have increased significantly over time, red squirrels more so
 
 
 # 3. Do red and grey squirrels prefer different habitats? ----
@@ -198,7 +201,63 @@ str(summary)
 #   Does the model explain the variation in the data well?
 
 
+# filter the squirrel data to 2015-2017
+squirrels_1517 <- filter(squirrels, between(year, 2015, 2017))
 
+# change grid ref to a factor
+# squirrels_1517$OSGR.10km <- as.factor(squirrels_1517$OSGR.10km)
+str(squirrels_1517)
+
+squirrels_1517 <- rename(squirrels_1517, grid_ref = OSGR.10km)
+
+# summarise data at species and grid cell level
+squirrels_1517 <- group_by(squirrels_1517, species, grid_ref)
+
+summary2 <- summarise(squirrels_1517, total_count = sum(count))
+
+# remove counts greater than 300
+summary2 <- filter(summary2, total_count <= 300)
+
+# merge squirrel and forest data sets
+forest <- rename(forest, grid_ref = TILE_NAME)
+
+forest_squirrels = merge(summary2, forest, by="grid_ref")
+
+# scatterplot of abundance as a function of forest cover for each species
+
+(forest_plot <- ggplot(forest_squirrels, aes(x=cover, y=total_count, 
+                                             color=species)) +
+    geom_point(size = 2) +
+    theme_bw() +
+    scale_colour_manual(values = c("#4A4A4A", "#FF4500")) +
+    ylab("Squirrel Abundance\n") +
+    xlab("\nForest Cover") +
+    theme(axis.text.x = element_text(size = 12, angle = 45, vjust = 1, hjust = 1),
+          axis.text.y = element_text(size = 12),
+          axis.title = element_text(size = 14, face = "plain"),                        
+          panel.grid = element_blank(),
+          plot.margin = unit(c(1,1,1,1), units = , "cm"),
+          legend.text = element_text(size = 8, face = "italic"),
+          legend.title = element_blank(),
+          legend.position = c(0.9, 0.799)))
+
+# linear model
+# forest.m <- lm(total_count ~ cover, data = forest_squirrels)
+# summary(forest.m)
+
+forest.m <- lm(total_count ~ cover + species, data = forest_squirrels)
+summary(forest.m)
+
+# no association with forest cover and no sig diff between species
+# NO! ----
+# Actual answer:
+# Red squirrels are positively associated with forest cover 
+# and grey squirrels show the opposite trend
+
+# glm
+# forest.m2 <- glm(total_count ~ cover + species, data = forest_squirrels,
+#                  family = poisson)
+# summary(forest.m2)
 
 
 # 4. Re-classify forest cover ----
@@ -221,6 +280,40 @@ str(summary)
 # In what cover classes are red squirrels more abundant than the grey?
 
 
+forest_squirrels <- forest_squirrels %>% 
+  mutate(cover.class = case_when(
+    cover <= 0.1 ~ "0-10%",
+    0.1 < cover & cover <= 0.2 ~ "10-20%",
+    0.2 < cover & cover <= 0.3 ~ "20-30%",
+    0.3 < cover & cover <= 0.4 ~ "30-40%",
+    0.4 < cover & cover <= 0.5 ~ "40-50%",
+    0.5 < cover ~ "50+%"
+    ))
 
+forest_squirrels$cover.class <- as.factor(forest_squirrels$cover.class)
+str(forest_squirrels)
 
+forest_squirrels <- group_by(forest_squirrels, species, cover.class)
 
+# summary3 <- summarise(forest_squirrels, median_abundance = median(total_count),
+#                       st_dev = sd(total_count))
+
+(forest_plot2 <- ggplot(forest_squirrels, aes(x = cover.class, y = total_count, 
+                                      color = species)) +
+    geom_boxplot() +
+    theme_bw() +
+    scale_colour_manual(values = c("#4A4A4A", "#FF4500")) +
+    ylab("Squirrel Abundance\n") +
+    xlab("\nForest Cover") +
+    theme(axis.text.x = element_text(size = 12, angle = 45, vjust = 1, hjust = 1),
+          axis.text.y = element_text(size = 12),
+          axis.title = element_text(size = 14, face = "plain"),                        
+          panel.grid = element_blank(),
+          plot.margin = unit(c(1,1,1,1), units = , "cm"),
+          legend.text = element_text(size = 8, face = "italic"),
+          legend.title = element_blank()))
+
+# From what cover class are red squirrels visibly more abundant than 
+# grey squirrels?
+# Answer:
+# From 20% cover and above    ???
